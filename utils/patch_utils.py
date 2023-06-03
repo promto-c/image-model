@@ -104,7 +104,6 @@ def pad_to_fit_patches(input_image_tensor: torch.Tensor,
 
     Diagram:
     --------
-
     The function pads the input image tensor to ensure proper coverage of patches for patched inference.
     The diagram below illustrates the concept:
 
@@ -124,7 +123,7 @@ def pad_to_fit_patches(input_image_tensor: torch.Tensor,
                       |--|          ➤ overlap_size
 
     Padded Image:
-    +---------Padded Image--------+  
+    +---------Padded-Image--------+  
     |   +-----Input-Image-----+   |
     |   |                     |   |
     |   |                     |   |
