@@ -15,7 +15,6 @@ def save_model(model: nn.Module, save_path: str, optimize: bool = True) -> None:
     scripted_model = torch.jit.script(model, optimize=optimize)
     torch.jit.save(scripted_model, save_path)
 
-
 def load_model(load_path: str) -> nn.Module:
     """Load a PyTorch model from a file using TorchScript and JIT.
 
