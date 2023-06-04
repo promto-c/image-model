@@ -1,28 +1,25 @@
-# dataset.py
-import os
-from PIL import Image
-from torch.utils.data import Dataset
 import torch
+from torch.utils.data import Dataset
+from utils.image_utils import read_image_as_tensor
 
-class NoisyDataset(Dataset):
-    def __init__(self, root_dir, transform=None, noise_factor=0.5):
-        self.root_dir = root_dir
+class ImageDataset(Dataset):
+    def __init__(self, image_paths, label_paths, transform=None):
+        self.image_paths = image_paths
+        self.label_paths = label_paths
         self.transform = transform
-        self.noise_factor = noise_factor
-        self.image_files = os.listdir(self.root_dir)
 
     def __len__(self):
-        return len(self.image_files)
+        return len(self.image_paths)
 
     def __getitem__(self, idx):
-        image_path = os.path.join(self.root_dir, self.image_files[idx])
-        image = Image.open(image_path).convert('RGB')
+        image_path = self.image_paths[idx]
+        label_path = self.label_paths[idx]
+
+        image_tensor = read_image_as_tensor(image_path)
+        label_tensor = read_image_as_tensor(label_path)
 
         if self.transform:
-            image = self.transform(image)
-        
-        # Create a noisy version of the image
-        noise = torch.randn_like(image) * self.noise_factor
-        noisy_image = image + noise
+            image_tensor = self.transform(image_tensor)
+            label_tensor = self.transform(label_tensor)
 
-        return noisy_image, image  # Return as a tuple of (noisy, clean)
+        return image_tensor, label_tensor

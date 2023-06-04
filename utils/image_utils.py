@@ -5,18 +5,28 @@ import OpenEXR
 import Imath
 import torch
 
-def get_num_image_channels(image_data: np.ndarray) -> int:
+from typing import Union
+
+def get_num_image_channels(image_data: Union[np.ndarray, torch.Tensor]) -> int:
     """Get the number of channels in an image.
 
     Args:
-        image_data (np.ndarray): The image data.
+        image_data (Union[np.ndarray, torch.Tensor]): The image data.
 
     Returns:
         int: The number of image channels.
 
+    Raises:
+        ValueError: If the image data type is unsupported.
+
     """
     # Determine the number of channels based on the dimensions of the image data
-    num_channels = image_data.shape[-1] if image_data.ndim == 3 else 1
+    if isinstance(image_data, np.ndarray):
+        num_channels = image_data.shape[-1] if image_data.ndim == 3 else 1
+    elif isinstance(image_data, torch.Tensor):
+        num_channels = image_data.shape[1] if image_data.dim() == 4 else image_data.shape[0]
+    else:
+        raise ValueError("Unsupported image data type. Expected np.ndarray or torch.Tensor.")
 
     # Return the number of channels
     return num_channels
@@ -84,8 +94,11 @@ def read_exr_image(image_path: str) -> np.ndarray:
     # Create an empty NumPy array to store the image data
     image_data = np.zeros((height, width, num_channels), dtype=np.float32)
 
+    # Determine the channel keys
+    channel_keys = 'RGB' if len(channels.keys()) == 3 else channels.keys()
+
     # Read each channel and populate the image data array
-    for i, channel_name in enumerate(channels.keys()):
+    for i, channel_name in enumerate(channel_keys):
         # Retrieve the pixel values for the channel
         pixels = exr_file.channel(channel_name, Imath.PixelType(Imath.PixelType.FLOAT))
         pixels = np.frombuffer(pixels, dtype=np.float32)
@@ -123,6 +136,29 @@ def read_image_as_tensor(image_path: str) -> torch.Tensor:
 
     # Return the image tensor
     return image_tensor
+
+def write_image(image_path: str, image_tensor: torch.Tensor) -> None:
+    """Write an image to disk using OpenCV.
+
+    Args:
+        image_path (str): The path to save the image.
+        image_tensor (torch.Tensor): The image data as a PyTorch tensor.
+    """
+    # Convert the image tensor to a NumPy array
+    image_data = image_tensor.permute(1, 2, 0).detach().numpy()
+
+    # Convert image data to the appropriate data type for writing with cv2
+    if image_data.dtype == np.float32:
+        image_data = (image_data * 255.0).astype(np.uint8)
+
+    # If the image data has a single channel, convert it to 3 channels (grayscale to BGR)
+    if len(image_data.shape) == 2:
+        image_data = cv2.cvtColor(image_data, cv2.COLOR_GRAY2BGR)
+    elif image_data.shape[2] == 3:
+        image_data = cv2.cvtColor(image_data, cv2.COLOR_RGB2BGR)
+
+    # Write the image to disk using cv2
+    cv2.imwrite(image_path, image_data)
 
 def main():
     # Get the current directory
