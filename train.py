@@ -3,6 +3,8 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, Dataset
 from torchvision.transforms import ToTensor, Normalize
+import torchsummary
+
 from dataset import ImageDataset
 from models.unet import UNet
 from utils.model_utils import save_model
@@ -37,12 +39,11 @@ def train_image(model: nn.Module,
     # Create the directory for saving checkpoints if it does not exist
     os.makedirs(checkpoint_path, exist_ok=True)
 
-    # Ensure checkpoint_step is not greater than num_epochs
-    if checkpoint_step > num_epochs:
-        checkpoint_step = num_epochs
-
     # Calculate the index of the last epoch
     last_epoch = num_epochs + start_epoch - 1
+
+    # Limit checkpoint_step to be not greater than num_epochs
+    checkpoint_step = min(checkpoint_step, num_epochs)
 
     # Create data loader
     data_loader  = DataLoader(dataset, batch_size=batch_size, shuffle=True)
@@ -106,10 +107,14 @@ def main():
     label_dir = os.path.join(data_dir, 'labels')
     checkpoint_path = './checkpoints'
     
+    # Set device
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
     # Set hyperparameters
     num_epochs = 10
     batch_size = 2
     learning_rate = 0.001
+    checkpoint_step = 5
 
     # Create dataset
     image_paths = [os.path.join(image_dir, filename) for filename in os.listdir(image_dir)]
@@ -123,6 +128,12 @@ def main():
     # Create model
     model = UNet(in_channels=num_input_channels, out_channels=num_label_channels)
 
+    # Specify the input size
+    input_size = dataset[0][0].shape
+
+    # Use torchsummary to print the summary of the model
+    torchsummary.summary(model, input_size=input_size, batch_size=batch_size, device=device)
+
     # Define loss function and optimizer
     criterion = nn.BCELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
@@ -135,7 +146,8 @@ def main():
                 batch_size=batch_size, 
                 num_epochs=num_epochs,
                 checkpoint_path=checkpoint_path,
-                device='cpu',
+                checkpoint_step=checkpoint_step,
+                device=device,
                 )
 
 if __name__ == '__main__':
