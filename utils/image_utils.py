@@ -88,21 +88,19 @@ def read_exr_image(image_path: str) -> np.ndarray:
     width = data_window.max.x - data_window.min.x + 1
     height = data_window.max.y - data_window.min.y + 1
 
-    # Calculate the number of channels in the image
-    num_channels = len(channels)
-
-    # Create an empty NumPy array to store the image data
-    image_data = np.zeros((height, width, num_channels), dtype=np.float32)
-
     # Determine the channel keys
     channel_keys = 'RGB' if len(channels.keys()) == 3 else channels.keys()
 
-    # Read each channel and populate the image data array
-    for i, channel_name in enumerate(channel_keys):
-        # Retrieve the pixel values for the channel
-        pixels = exr_file.channel(channel_name, Imath.PixelType(Imath.PixelType.FLOAT))
-        pixels = np.frombuffer(pixels, dtype=np.float32)
+    # Read all channels at once
+    channel_data = exr_file.channels(channel_keys, Imath.PixelType(Imath.PixelType.FLOAT))
 
+    # Create an empty NumPy array to store the image data
+    image_data = np.zeros((height, width, len(channel_keys)), dtype=np.float32)
+
+    # Populate the image data array
+    for i, data in enumerate(channel_data):
+        # Retrieve the pixel values for the channel
+        pixels = np.frombuffer(data, dtype=np.float32)
         # Reshape the pixel values to match the image dimensions and store them in the image data array
         image_data[:, :, i] = pixels.reshape((height, width))
 
@@ -174,4 +172,22 @@ def main():
     print("Image shape:", image_tensor.shape)
 
 if __name__ == "__main__":
-    main()
+    # main()
+
+    import time
+
+    exr_image_path = 'images\example_image.1003.exr'
+
+    t0 = time.time()
+
+    
+    image_data = read_exr_image(exr_image_path)
+
+    # image_data = cv2.imread(ex
+    # r_image_path, cv2.IMREAD_ANYCOLOR | cv2.IMREAD_ANYDEPTH)
+    print(image_data.shape)
+
+
+    t1 = time.time()
+
+    print(t1-t0)
